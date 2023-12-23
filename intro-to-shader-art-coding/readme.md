@@ -18,6 +18,8 @@ void main() {
 }
 ```
 
+![red-cube](./samples/01-red-cube.webm)
+
 ## Resolution
 
 To access the resolution of the render area:
@@ -268,7 +270,7 @@ void main() {
 
 In this case, the blue channel has the highest value which produces a vibrant blue tint in the final result.
 
-To add even mroe variety to the colors, a `palette()` function can be introduced, as described in [Inigo Quilez Palettes](https://iquilezles.org/articles/palettes/) article:
+To add even more variety to the colors, a `palette()` function can be introduced, as described in [Inigo Quilez Palettes](https://iquilezles.org/articles/palettes/) article:
 
 ```glsl
 vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
