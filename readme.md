@@ -1,6 +1,6 @@
 # Shader Studies
 
-Studying how to generate visuals with [GLSL](https://www.khronos.org/opengl/wiki/OpenGL_Shading_Language).
+Studying how to work with [GLSL](https://www.khronos.org/opengl/wiki/OpenGL_Shading_Language).
 
 * [Renderer](./renderer)
     * [Shaders](./renderer/shaders/)
