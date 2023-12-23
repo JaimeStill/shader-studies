@@ -11,7 +11,7 @@ Studying how to generate visuals with [GLSL](https://www.khronos.org/opengl/wiki
 
 ## [Studies](./studies/)
 
-* [Intro to Shader Art Coding](./intro-to-shader-art-coding/)
+* [Intro to Shader Art Coding](./studies/intro-to-shader-art-coding/)
 
 ## Working With Shaders Locally
 
