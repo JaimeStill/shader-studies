@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>GLSL Renderer</title>
+        <link rel="stylesheet" href="index.css">
+    </head>
+    <body>
+        <div id="container"></div>
+        <script id="vertexShader" type="x-shader/x-vertex">
+            void main() {
+                gl_Position = vec4(position, 1.0);
+            }
+        </script>
+        <script type="module" src="main.js"></script>
+    </body>
+</html>

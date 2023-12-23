@@ -1,4 +1,4 @@
-# [Intro to Shader Art Coding](https://youtu.be/f4s1h2YETNY?si=pbiWW2R3pwPZ0lnT)
+# [Intro to Shader Art Coding](https://youtu.be/f4s1h2YETNY)
 
 ## In / Out Parameters
 
@@ -18,7 +18,8 @@ void main() {
 }
 ```
 
-[red-cube](https://github.com/JaimeStill/shader-studies/assets/14102723/198d4d5e-a74c-4965-b18a-e9f2dc78d875)
+![red-box](https://github.com/JaimeStill/shader-studies/assets/14102723/2a0cb2f0-177f-4564-a986-a8e69ca82d58)
+
 
 ## Resolution
 
@@ -67,6 +68,8 @@ void main() {
 }
 ```
 
+![uv-x](https://github.com/JaimeStill/shader-studies/assets/14102723/7d7e9c66-d0ab-48ee-b4f0-73ff6cfb285f)
+
 Map both `uv.x` and `uv.y` to the red and green channels, respectively:
 
 ```glsl
@@ -78,6 +81,8 @@ void main() {
     gl_FragColor = vec4(uv.x, uv.y, 0.0, 1.0);
 }
 ```
+
+![red-x-green-y](https://github.com/JaimeStill/shader-studies/assets/14102723/700c0a99-dd3b-4d07-9846-54da8cdcb705)
 
 Can be simplified:
 
@@ -99,6 +104,8 @@ To translate the uv coordinate space from `0-1` to `-1-1`:
 vec2 uv = gl_FragCoord.xy / u_resolution.xy * 2.0 - 1.0;
 ```
 
+![center-uv](https://github.com/JaimeStill/shader-studies/assets/14102723/4d7cd990-b54c-48dd-be15-86f525cfe8e9)
+
 ## `length()`
 
 Calculate the distance of a pixel from the center:
@@ -113,6 +120,8 @@ Mapping `d` to the red channel exposes a radial gradient:
 gl_FragColor = vec4(d, 0.0, 0.0, 1.0);
 ```
 
+![radial-gradient](https://github.com/JaimeStill/shader-studies/assets/14102723/6623fb6d-0021-4a42-b76a-3710e9d2565e)
+
 ## Fix Aspect Ratio
 
 To fix the aspect ratio and ensure that the radial gradient is always circular:
@@ -122,10 +131,12 @@ vec2 uv = gl_FragCoord.xy / u_resolution.xy * 2.0 - 1.0;
 uv.x *= u_resolution.x / u_resolution.y;
 ```
 
+![fix-aspect-ratio](https://github.com/JaimeStill/shader-studies/assets/14102723/ab3c32cc-458d-45d4-a3c5-675398cb7186)
+
 This can all be simplified to:
 
 ```glsl
-vec2 uv = (gl_FragCoord * 2.0 - u_resolution.xy) / u_resolution.y;
+vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
 ```
 
 ## Signed Distance Functions
@@ -147,6 +158,8 @@ d -= 0.5;
 d = abs(d);
 ```
 
+![abs-sdf](https://github.com/JaimeStill/shader-studies/assets/14102723/9647846b-0b52-4800-ba13-0d2a129c26d3)
+
 ## `step()`
 
 To achieve a sharper transition, you can use the step function. It accepts two values: a threshold, and a parameter. The output can only have two states. Returns `0` for any value less than the threshold, and `1` for any value greater than or equal to the threshold.
@@ -160,6 +173,8 @@ d = abs(d);
 d = step(0.1, d);
 ```
 
+![step](https://github.com/JaimeStill/shader-studies/assets/14102723/58151ea6-0799-42df-8d65-c1339fa144a3)
+
 ## `smoothstep()`
 
 If a smoother transition between black and white is desired, utilize the `smoothstep()` function. It takes two threshold parameters as well as a value parameter. The color black is assigned when the value is below the first threshold, and white when it exceeds the second threshold. All values in between are smoothly interpolated.
@@ -171,6 +186,8 @@ d = abs(d);
 d = smoothstep(0.0, 0.1, d);
 ```
 
+![smoothstep](https://github.com/JaimeStill/shader-studies/assets/14102723/9335cf8c-cc8b-4ed1-b85d-0ac2e4b632d3)
+
 ## `sin()` and Time
 
 Instead of subtracting `0.5`, apply `sin(d)` to create a radial repetition of rings. Initially, it will only display a single dot because the *sine* of a value between `0` and `1` is very close to the original value, resulting in minimal change. However, when the frequency of the input value is increased, the oscillating value of the *sin* function , which ranges from `-1 - 1`, is better observed:
@@ -181,6 +198,8 @@ d = sin(d * 8.0) / 8.0;
 d = abs(d);
 d = smoothstep(0.0, 0.1, d);
 ```
+
+![sin](https://github.com/JaimeStill/shader-studies/assets/14102723/c81316f0-5286-4baa-8b02-f1246e57c747)
 
 Note that multiplying the distance by `8` before applying the *sine* function stretches the space and alters the color intensity requiring a corresponding division of the output by the same factor.
 
@@ -202,6 +221,8 @@ void main() {
     gl_FragColor = vec4(d, d, d, 1.0);
 }
 ```
+
+[timed-sin.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/6ce285d8-62d2-46d1-bcd2-173c58e324b9)
 
 ## 1/x
 
@@ -228,6 +249,8 @@ d = abs(d);
 d = 0.02/d;
 ```
 
+[inverse.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/8cdbd2fb-0405-47fa-b19e-e56619a246cb)
+
 ## Add Colors
 
 A `vec3` variable named `col` is introduced that initially contains the color red. By multiplying this color variable with the value of `d` and making it the new shader output, the black areas will remain black while the white areas will be tinted with the corresponding color value:
@@ -240,7 +263,6 @@ void main() {
 
     d = sin(d * 8.0 + u_time) / 8.0;
     d = abs(d);
-
     d = 0.02/d;
 
     col *= d;
@@ -248,6 +270,8 @@ void main() {
     gl_FragColor = vec4(col, 1.0);
 }
 ```
+
+[neon-red.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/8d68ad8e-ae18-4824-bb3d-d404e90a6d27)
 
 Here, the calculations are not limited to the `0-1` range so the colors can be intensified by setting certain components in `col` to higher values:
 
@@ -267,6 +291,8 @@ void main() {
     gl_FragColor = vec4(col, 1.0);
 }
 ```
+
+[neon-blue.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/c6ba9a48-4d7f-40fe-8e2e-3e089ec016a4)
 
 In this case, the blue channel has the highest value which produces a vibrant blue tint in the final result.
 
@@ -299,6 +325,8 @@ With this modification, the constant color can be replaced with the `palette()` 
 vec3 col = palette(d);
 ```
 
+[palette.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/747fde45-d068-4b19-937c-439046556256)
+
 It takes the original distance to the center of the screen as input before any transformations. The call to the `palette()` function can be adjusted by adding a time offset, adding an additional dynamic element, causing the colors to continuously shift and evolve.
 
 ## `fract()`
@@ -310,6 +338,8 @@ vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
 
 uv = fract(uv);
 ```
+
+[fract-broken.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/afd17fe7-950a-4f35-9a04-de170b9fc6e2)
 
 Even if the space has been repeated, it doesn't render the full circle in each space. To understand this issue, display back only the value of the `uv` variable:
 
@@ -345,6 +375,9 @@ void main() {
 }
 ```
 
+![fract-uv](https://github.com/JaimeStill/shader-studies/assets/14102723/2de364ea-d7da-4494-ae51-91fc587788d1)
+
+
 Repetition was successfully achieved by creating four smaller versions of the original UV coordinates, however each repetition is now confined within the `0-1` range instead of the desired clip space.
 
 To resolve this, the same scaling solution previously implemented can be applied by scaling the UVs first, then subtracting the `0.5` to center them:
@@ -371,6 +404,8 @@ void main() {
 }
 ```
 
+[fract-uv-scale.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/e42b6aef-1e8a-4feb-9a60-74ec3afef2b6)
+
 All of the UV operations can be simplified into a single line for brevity:
 
 ```glsl
@@ -390,6 +425,8 @@ This will allow `d` inside of the `palette()` function call with the length of t
 ```glsl
 vec3 col = palette(length(uv0) + u_time);
 ```
+
+[frag-global-uv.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/44245151-ed8a-47ce-bb4e-5f9e4a9097b7)
 
 ## Iterations
 
@@ -413,7 +450,7 @@ finalColor += col * d;
 Finally, `finalColor` will be output as the result of the shader:
 
 ```glsl
-fragColor = vec4(finalColor, 1.0);
+gl_FragColor = vec4(finalColor, 1.0);
 ```
 
 This modification doesn't change the visual, but sets the stage for adding iterations to the composition.
@@ -452,11 +489,15 @@ for(float i = 0.0; i < 3.0; i++) {
 }
 ```
 
+[initial-iterations.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/16325db0-d6c6-4149-97a4-b9b4e9e9f868)
+
 As the complexity intensifies, it may become visually overwhelming. To mitigate this, the frequency of the time offset can be reduced:
 
 ```glsl
 vec3 col = palette(length(uv0) + u_time * 0.4);
 ```
+
+[calmed-iterations.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/e04a7f54-7fed-459a-821f-406c2159e990)
 
 Iterating this code generates interesting patterns because each iteration involves scaling and repeating the space using the `fract()` function and adds the resulting colors together.
 
@@ -468,6 +509,8 @@ To introduce more visual interest, this symmetry can be broken by multiplying `u
 uv = fract(uv * 1.5) - 0.5;
 ```
 
+[asymmetric-iterations.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/eb3528d9-dd0d-4da2-9f7c-3e6f0bac1986)
+
 ## `exp()`
 
 The `exp()` function can be used to increase the variations further. `d`, the local distance to the center of each repetition, is multiplied by an `exp()` function depending on the global distance to the center of the canvas:
@@ -476,7 +519,9 @@ The `exp()` function can be used to increase the variations further. `d`, the lo
 float d = length(uv) * exp(-length(uv0));
 ```
 
-To try and understand how this works, you can use teh website [Graphtoy](https://graphtoy.com/) that was designed to graph GLSL functions.
+[exp.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/590b9480-9956-4171-8671-3a1c5272f1f5)
+
+To try and understand how this works, you can use the website [Graphtoy](https://graphtoy.com/) that was designed to graph GLSL functions.
 
 Clear the initially loaded graph and set `f1(x,t) = x` as a reference. Set `f2(x,t) = exp(-x)`.
 
@@ -490,13 +535,17 @@ Considering the current brightness, the falloff is further reduced on the invers
 d = 0.01 / d;
 ```
 
+[balanced-exp.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/1c6913ea-6b65-40c0-b546-b00239dc69d4)
+
 To add additional variation to each layer of the loop, introduce `i` into the calculations. This can be accomplished by adjusting the call to the `palette()` function, resulting in slight color offsets after each iteration:
 
 ```glsl
 vec3 col = palette(length(uv0) + i * 0.4 + u_time * 0.4);
 ```
 
-With the improved visual quality, it is appropriate to introduce abn additional iteration to enhance the creation of smaller details:
+[variable-iterations.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/f6cd0c89-d78f-43be-91fc-021ad2022cb9)
+
+With the improved visual quality, it is appropriate to introduce an additional iteration to enhance the creation of smaller details:
 
 ```glsl
 for(float i = 0.0; i < 4.0; i++) {
@@ -513,6 +562,8 @@ for(float i = 0.0; i < 4.0; i++) {
 }
 ```
 
+[add-iteration.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/f5c03a04-3a8e-4eea-bde5-caf9dd75f114)
+
 ## `pow()`
 
 The `pow()` function can be used to enhance the overall contrast of the image. When the input ranges from `0 - 1`, the `pow()` function effectively accentuates the darker colors closer to `0` while having a lesser effect on the lighter shades:
@@ -521,11 +572,15 @@ The `pow()` function can be used to enhance the overall contrast of the image. W
 d = pow(0.01 / d, 2.0);
 ```
 
+[pow.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/a1102646-d47c-4ac9-bdd7-9de227ad0187)
+
 Although taking the power of `2` may seem excessive, smaller values such as `1.2` can significantly improve the contrast and visual impact of the composition:
 
 ```glsl
 d = pow(0.01 / d, 1.2);
 ```
+
+[final.webm](https://github.com/JaimeStill/shader-studies/assets/14102723/f890de9a-59da-42ea-981a-ac63ea083060)
 
 ## Final Shader
 
