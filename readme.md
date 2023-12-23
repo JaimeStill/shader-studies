@@ -22,8 +22,8 @@ Download [Visual Studio Code](https://code.visualstudio.com/) and install the fo
 
 This will provide you with intellisense, formatting, and a preview canvas that allows you to see your shader rendering in real time:
 
-![vs-code-setup](https://github.com/JaimeStill/shader-studies/assets/14102723/778110ec-2556-493b-9785-0a56bed86696)
+![vs-code-setup](https://github.com/JaimeStill/shader-studies/assets/14102723/f9040316-4304-4f52-926b-d3870b34fd0b)
 
 Additionally, you can use [Three.js](https://threejs.org/) and [Vite](https://vitejs.dev/) to run your shaders in a browser using the [renderer](./renderer/) project in this repository. The [Readme](./renderer/readme.md) has instructions for using that project to run your shaders:
 
-![renderer-in-browser](https://github.com/JaimeStill/shader-studies/assets/14102723/27f72036-0cd8-4a99-a776-0d94736a99cc)
+![renderer-in-browser](https://github.com/JaimeStill/shader-studies/assets/14102723/76b18015-816d-474c-b478-1b3ee132ed14)
