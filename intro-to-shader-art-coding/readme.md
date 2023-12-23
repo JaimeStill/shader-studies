@@ -18,8 +18,6 @@ void main() {
 }
 ```
 
-![red-cube](./samples/01-red-cube.webm)
-
 ## Resolution
 
 To access the resolution of the render area:
