@@ -18,6 +18,8 @@ void main() {
 }
 ```
 
+[red-cube](https://github.com/JaimeStill/shader-studies/assets/14102723/198d4d5e-a74c-4965-b18a-e9f2dc78d875)
+
 ## Resolution
 
 To access the resolution of the render area:
