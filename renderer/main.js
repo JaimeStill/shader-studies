@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const file = './shaders/intro-to-shader-art-coding/final.frag';
+const file = './shaders/intro-to-raymarching/01-start.frag';
 let frag;
 let container;
 let camera, scene, renderer, clock;

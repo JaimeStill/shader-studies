@@ -15,6 +15,7 @@
 
 ## Articles
 
+* [Basic 3D Theory](https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_on_the_web/Basic_theory)
 * [Palettes](https://iquilezles.org/articles/palettes/)
 * [2D Distance Functions](https://iquilezles.org/articles/distfunctions2d/)
 * [3D Signed Distance Functions](https://iquilezles.org/articles/distfunctions/)
