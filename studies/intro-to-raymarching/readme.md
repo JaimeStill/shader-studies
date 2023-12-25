@@ -263,8 +263,10 @@ The distortion observed when the sphere approaches the edges of the screen is in
 To control the field of view, multiply the `x` and `y` axes of the ray direction before normalization to influence how the rays are spread:
 
 ```glsl
-vec3 rd = normalize(vec3(uv * 0.7, 1.0));
+vec3 rd = normalize(vec3(uv * 1.5, 1.0));
 ```
+
+// TODO: Insert 05-field-of-view.frag video
 
 At this point, another object is added to the scene. A cube of size 75 located at the origin:
 
@@ -276,7 +278,7 @@ float sdBox(vec3 p, vec3 b) {
 }
 
 float map(vec3 p) {
-    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
     float box = sdBox(p, vec3(0.75));
 
@@ -289,7 +291,7 @@ To combine these shapes, simply return the minimum between the two distances usi
 
 ```glsl
 float map(vec3 p) {
-    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
     float box = sdBox(p, vec3(0.75));
 
@@ -299,21 +301,19 @@ float map(vec3 p) {
 
 // TODO: Insert 07-add-box.frag video
 
+## Operators
+
 If you want to get creative, you can experiment with other operators like the difference or intersection operators to combine shapes in more interesting ways:
 
 ```glsl
 float opUnion(float d1, float d2) {
     return min(d1, d2);
 }
-```
 
-```glsl
 float opSubtraction(float d1, float d2) {
     return max(-d1, d2);
 }
-```
 
-```glsl
 float opIntersection(float d1, float d2) {
     return max(d1, d2);
 }
@@ -322,5 +322,60 @@ float opIntersection(float d1, float d2) {
 Additionally, there are smoother versions of these operators that allow for a gradual blending between the shapes:
 
 ```glsl
+float opSmoothUnion(float d1, float d2, float k) {
+    float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+    return mix(d2, d1, h) - k * h * (1.0 - h);
+}
 
+float opSmoothSubtraction(float d1, float d2, float k) {
+    float h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);
+    return mix(d2, -d1, h) + k * h * (1.0 - h);
+}
+
+float opSmoothIntersection(float d1, float d2, float k) {
+    float h = clamp(0.5 - 0.5 * (d2 - d1) / k, 0.0, 1.0);
+    return mix(d2, d1, h) + k * h * (1.0 - h);
+}
 ```
+
+The smooth minimum function, `smin()`, will be used which includes an additional parameter for adjusting the blending allowing a smooth union between the shapes to be created:
+
+```glsl
+float smin(float d1, float d2, float k) {
+    float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+    return mix(d2, d1, h) - k * h * (1.0 - h);
+}
+
+float map(vec3 p) {
+    // vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+    float box = sdBox(p, vec3(0.75));
+
+    return smin(sphere, box, 2.0);
+}
+```
+
+// TODO: Insert 07-smin.frag video
+
+A ground can be added by creating a new variable `ground` of type `float` that holds the signed distance function to the `xz` plane. Visualizing one ray coming out of the camera, the distance between any point along this ray and the ground is directly determined by the ray's current `y` position, which represents its height above the ground.
+
+The ground should be pushed further down by adding an offset of `0.75` to its distance. Otherwise, you won't see anything as the camera would be at the exact same height as ground and intersecting with it. A positive number is added to move the ground in the negative `y` direction.
+
+It's also possible to smoothly union the ground with the other shapes, this time using a lower blending amount:
+
+```glsl
+float map(vec3 p) {
+    // vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+    float box = sdBox(p, vec3(0.75));
+    float ground = p.y + 0.75;
+
+    return smin(ground, smin(sphere, box, 2.0), 1.0);
+}
+```
+
+// TODO: Insert 08-ground.frag video
+
+## Scaling

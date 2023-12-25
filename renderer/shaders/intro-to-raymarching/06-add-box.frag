@@ -16,7 +16,7 @@ float sdBox(vec3 p, vec3 b) {
 }
 
 float map(vec3 p) {
-    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
     float box = sdBox(p, vec3(0.75));
 
@@ -28,7 +28,7 @@ void main() {
 
     // initialization
     vec3 ro = vec3(0.0, 0.0, -3.0);
-    vec3 rd = normalize(vec3(uv * 0.7, 1.0));
+    vec3 rd = normalize(vec3(uv * 1.5, 1.0));
     vec3 col = vec3(0);
 
     float t = 0.0;

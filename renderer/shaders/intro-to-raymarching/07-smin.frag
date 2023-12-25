@@ -25,9 +25,8 @@ float map(vec3 p) {
     vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
     float box = sdBox(p, vec3(0.75));
-    float ground = p.y + 0.75;
 
-    return smin(ground, smin(sphere, box, 2.0), 1.0);
+    return smin(sphere, box, 2.0);
 }
 
 void main() {

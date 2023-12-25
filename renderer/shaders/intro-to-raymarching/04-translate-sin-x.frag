@@ -10,7 +10,7 @@ float sdSphere(vec3 p, float s) {
 }
 
 float map(vec3 p) {
-    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
 
     return sphere;
