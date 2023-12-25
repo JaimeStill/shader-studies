@@ -9,7 +9,9 @@ float sdSphere(vec3 p, float s) {
 }
 
 float map(vec3 p) {
-    float sphere = sdSphere(p, 1.0);
+    vec3 spherePos = vec3(3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+
     return sphere;
 }
 
@@ -30,13 +32,11 @@ void main() {
 
         t += d;
 
-        col = vec3(i) / 80.0;
-
         if (d < 0.001 || t > 100.0) break;
     }
 
     // coloring
-    // col = vec3(t * 0.2);
+    col = vec3(t * 0.2);
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -85,7 +85,7 @@ The shader's output color ranges from `0 - 1`. As soon as the ray travels a dist
 
 To address this, the camera can be moved closer or the distance variable can be divided by an arbitrary number to start seeing details further away: `col = vec3(t * 0.2)`.
 
-> TODO: Insert picture of rendered shader.
+> TODO: Insert 01-start.frag image
 
 This rendering can also be referred to as a Z-buffer, or depth-buffer, as each pixel's color represents the distance from the camera to the scene in grayscale value.
 
@@ -207,13 +207,13 @@ if (d < 0.001 || t > 100.0) break;
 >
 > gl_FragColor = vec4(col, 1.0);
 > ```
-> TODO: Insert shader image
+> TODO: Insert 02-render-iterations.frag image
 
 This is finally the point where the fundamental ray marching algorithm is fleshed out, which can be very similar to a blank canvas in a 2D case. It serves as the starting point from which you can explore and experiment with ray marching.
 
 One final optimization will be to create a new variable containing the distance to the sphere and call a function that computes its signed distance:
 
-```
+```glsl
 float sdSphere(vec3 p, float s) {
     return length(p) - s;
 }
@@ -225,3 +225,102 @@ float map(vec3 p) {
 ```
 
 ## Translation
+
+The positions of objects can be manipulated in the scene by adjusting the input position sent to the distance functions.
+
+A new vector is introduced that represents the sphere's position in 3D space initially set to `0`. It is then subtracted from the input position before being sent to the `sdSphere()` function:
+
+```glsl
+float map(vec3 p) {
+    vec3 spherePos = vec3(0.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+
+    return sphere;
+}
+```
+
+It is now possible to move the sphere in the scene in all three axes defined by adjusting this vector. Setting the first parameter of the vector to `3.0` will move the sphere in the scene to the right three units.
+
+// TODO: Insert 03-translate-x.frag image
+
+This may seem counter-intuitive since the position must be subtracted from the input position. When the subtraction is performed, the canvas is being shifted three units in the negative direction resulting in the scene shifting to the right three units. Because of this behavior, translation and transforms will usually seem inverted in shaders.
+
+It's easy to add real-time movements by including the current time in the object's position. In this case, a *sine* function of time is used to make the sphere's `x` position fluctuate between `-3 - 3`:
+
+```glsl
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - sherePos, 1.0);
+
+    return sphere;
+}
+```
+
+// TODO: Insert 04-translate-sin-x.frag video
+
+The distortion observed when the sphere approaches the edges of the screen is inherent to perspective projection, which is implicitly being used. This distortion is connected to the camera's field of view, which indicates the total angle covered by the rays. A larger field of view lets you see more of the scene simultaneously, but also intensifies the distortion.
+
+To control the field of view, multiply the `x` and `y` axes of the ray direction before normalization to influence how the rays are spread:
+
+```glsl
+vec3 rd = normalize(vec3(uv * 0.7, 1.0));
+```
+
+At this point, another object is added to the scene. A cube of size 75 located at the origin:
+
+```glsl
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+    float box = sdBox(p, vec3(0.75));
+
+    return sphere;
+
+}
+```
+
+To combine these shapes, simply return the minimum between the two distances using the `min()` function. This line can be thought of as an operation that unites the two shapes, also called the *union* operator:
+
+```glsl
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+    float box = sdBox(p, vec3(0.75));
+
+    return min(sphere, box);
+}
+```
+
+// TODO: Insert 07-add-box.frag video
+
+If you want to get creative, you can experiment with other operators like the difference or intersection operators to combine shapes in more interesting ways:
+
+```glsl
+float opUnion(float d1, float d2) {
+    return min(d1, d2);
+}
+```
+
+```glsl
+float opSubtraction(float d1, float d2) {
+    return max(-d1, d2);
+}
+```
+
+```glsl
+float opIntersection(float d1, float d2) {
+    return max(d1, d2);
+}
+```
+
+Additionally, there are smoother versions of these operators that allow for a gradual blending between the shapes:
+
+```glsl
+
+```
