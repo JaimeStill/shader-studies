@@ -4,13 +4,8 @@ precision mediump float;
 
 uniform vec2 u_resolution;
 
-float sdSphere(vec3 p, float s) {
-    return length(p) - s;
-}
-
 float map(vec3 p) {
-    float sphere = sdSphere(p, 1.0);
-    return sphere;
+    return length(p) - 1.0;
 }
 
 void main() {
@@ -30,11 +25,13 @@ void main() {
 
         t += d;
 
+        col = vec3(i) / 80.0;
+
         if (d < 0.001 || t > 100.0) break;
     }
 
     // coloring
-    col = vec3(t * 0.2);
+    // col = vec3(t * 0.2);
 
     gl_FragColor = vec4(col, 1.0);
 }

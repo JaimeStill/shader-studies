@@ -21,10 +21,11 @@ void main() {
     // ray marching
     for(int i = 0; i < 80; i++) {
         vec3 p = ro + rd * t;
-
         float d = map(p);
 
         t += d;
+
+        if (d < 0.001 || t > 100.0) break;
     }
 
     // coloring
