@@ -3,7 +3,14 @@ precision mediump float;
 #endif
 
 uniform vec2 u_resolution;
+uniform vec2 u_mouse;
 uniform float u_time;
+
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
 
 float sdSphere(vec3 p, float s) {
     return length(p) - s;
@@ -21,10 +28,13 @@ float smin(float d1, float d2, float k) {
 }
 
 float map(vec3 p) {
-    // vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
     vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
-    float box = sdBox(p, vec3(0.75));
+
+    vec3 q = p;
+    q.xy *= rot2D(u_time);
+
+    float box = sdBox(q, vec3(0.75));
     float ground = p.y + 0.75;
 
     return smin(ground, smin(sphere, box, 2.0), 1.0);
@@ -32,6 +42,7 @@ float map(vec3 p) {
 
 void main() {
     vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
 
     // initialization
     vec3 ro = vec3(0.0, 0.0, -3.0);
@@ -39,6 +50,10 @@ void main() {
     vec3 col = vec3(0);
 
     float t = 0.0;
+
+    // horizontal camera rotation
+    ro.xz *= rot2D(-m.x);
+    rd.xz *= rot2D(-m.x);
 
     // ray marching
     for(int i = 0; i < 80; i++) {

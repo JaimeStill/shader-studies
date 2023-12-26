@@ -21,7 +21,6 @@ float smin(float d1, float d2, float k) {
 }
 
 float map(vec3 p) {
-    // vec3 spherePos = vec3(sin(u_time * 3.0), 0.0, 0.0);
     vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
     float sphere = sdSphere(p - spherePos, 1.0);
     float box = sdBox(p, vec3(0.75));

@@ -379,3 +379,136 @@ float map(vec3 p) {
 // TODO: Insert 08-ground.frag video
 
 ## Scaling
+
+While these two shapes can actually be resized using their input parameters, scaling remains a valuable operation for more complex or grouped objects. The scaling operation can be executed by dividing or multiplying the input position: `float box = sdBox(p * 4.0, vec3(0.75))`. Much like the translation operation, the resulting size change of an object is inversely proportional to the scaling factor.
+
+Scaling actually distorts the metrics and distances within the composition, unlike translation, which can introduce artifacts in the rendering. This can be addressed by counteracting the scaling effect. This involves multiplying the final result of the distance function by the inverse of the scaling factor, or in simpler terms, dividing teh output by the scaling factor: `float box = sdBox(p * 4.0, vec(0.75)) / 4.0`.
+
+// TODO: Insert 09-scale-box.frag video
+
+This adjustment ensure that distances in the scene remain accurate and removes artifacts. As a final note, here the scaling is uniform, but you could also multiply the position by a vector in order to apply a different scale factor for each component.
+
+## Rotation
+
+> Before rotation is introduced, the scaling on the box is removed: `float box = sdBox(p, vec3(0.75))`.
+
+Rotation generally involves the call to an external function as it requires a bit more math. To rotate a point in space, you need to multiply it by a `2x2` rotation matrix in the 2D case:
+
+```glsl
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+```
+
+or a `3x3` matrix in the 3D case:
+
+```glsl
+mat3 rot3D(vec3 axis, float angle) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat3(
+        oc * axis.x * axis.x + c,
+        oc * axis.x * axis.y - axis.z * s,
+        oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,
+        oc * axis.y * axis.y + c,
+        oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,
+        oc * axis.y * axis.z + axis.x * s,
+        oc * axis.z * axis.z + c
+    );
+}
+```
+
+There is a gap in the complexity of the computations when adding another dimension. Fortunately, in the 3D case, there exists a simpler alternative called the Rodrigues rotation formula, which achieves the same result without using matrices:
+
+```glsl
+vec3 rot3D(vec3 p, vec3 axis, float angle) {
+    // Rodrigues' rotation formula
+    return mix(dot(axis, p) * axis, p, cos(angle))
+        + cross(axis, p) * sin(angle);
+}
+```
+
+> Links to resources on rotation:
+> * [How to rotate a vector](https://www.youtube.com/watch?v=7j5yW5QDC2U)
+> * [Quaternions and 3D rotation](https://www.youtube.com/watch?v=zjMuIxRvygQ)
+
+The 3D function takes as input a point in space, an axis, and an angle of rotation in radians. The axis is a `vec3` representing the 3D line around which the object will rotate, and it must be normalized. It can be used to rotate objects in any direction.
+
+2D rotation functions can be used even in 3D scenes, and are typically preferred for their speed and simplicity. However, this function only operates on vectors of two components. In order to use it, two comopnents of the 3D point will need to be extracted using swizzling syntax: `p.xz *= rot2D(angle)`. This constrains the rotation to be around the three fundamental axes only, but it can be changed aroudn multiple axes to allow for a greater range of rotation. Once you can visualize the three primary axes in space, using this function to rotate objects becomes quite straightforward.
+
+In the swizzling syntax, the component that is omitted represents the axis around which the object is rotated: `p.xz *= rot2D(angle)` will rotate the object around the `y` axis.
+
+To demonstrate, a copy of the input position `p` is created as `q` in order to rotate that copy only. The rotation is applied to `q` around the `z` axis, using `u_time` to animate the rotation: `q.xy *= rot2D(u_time)`. `q` is then passed to the `sdBox()` function call:
+
+```glsl
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+
+    vec3 q = p;
+    q.xy *= rot2D(u_time);
+
+    float box = sdBox(q, vec3(0.75));
+    float ground = p.y + 0.75;
+
+    return smin(ground, smin(sphere, box, 2.0), 1.0);
+}
+```
+
+// TODO: Insert 10-rotate-box.frag video
+
+## Order of Operations
+
+One aspect that is crucial in ray marching is the order of operations. If you translate first and then rotate, you'll get a different outcome compared to rotating then translating. This rule applies to most transformations in ray marching. If something isn't behaving as expected, double check the order in which the transformations are applied. It's also important to understand that when transformations are applied to the input point, it maintains that transformation for all future distance functions. This is why a new variable was created to rotate only the box. If the rotation had been conducted on the `p` variable, the ground would have also started to rotate. However the sphere, defined prior to applying rotation, would retain its original movement.
+
+## Camera Rotation
+
+It would be even better to add mouse control for the camera to view the scene from different angles. This can easily be done using the 2D rotation function along with the current position of the mouse.
+
+> In GLSL canvas, which is used the mouse position is only captured as a `vec2`. It can be defined as a uniform as follows:
+>
+> ```glsl
+> uniform vec2 u_mouse;
+> uniform vec2 u_resolution;
+> ```
+> Note that the `vec4` convention will be used for this documentation as it works when running in the Three.js-based [renderer](../../renderer/) project.
+
+It's a `vec4(x, y, z, w)` where the first two components represent the current pixel coordinates of the mouse much like the `gl_FragCoord` input parameter. The last two components contain information about the starting position and state of the mouse.
+
+Component | Description
+----------|------------
+`x` | mouse pixel `x`
+`y` | mouse pixel `y`
+`z` | drag start `x`
+`w` | drag start `y`
+
+State | Check
+------|------
+mouse down | `u_mouse.z > 0`
+1st frame | `u_mouse.zw > 0`
+mouse up | `u_mouse.zw < 0`
+
+Only the mouse position is needed, which can be extracted with swizzling. To mouse position in clip space can be established by creating a new vector and appliyng the same transformation as the `uv` coordinates:
+
+```glsl
+void main() {
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    // remainder of main()
+}
+```
+
+This new vector will have a value of `-1, -1` when the mouse is at the bottom left, a value of `1, 1` when the mouse is at the top right, and a value of `0, 0` when the mouse is centered.

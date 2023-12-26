@@ -12,6 +12,7 @@ Studying how to work with [GLSL](https://www.khronos.org/opengl/wiki/OpenGL_Shad
 ## [Studies](./studies/)
 
 * [Intro to Shader Art Coding](./studies/intro-to-shader-art-coding/)
+* [Intro to Raymarching](./studies/intro-to-raymarching/)
 
 ## Working With Shaders Locally
 
