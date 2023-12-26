@@ -478,7 +478,7 @@ One aspect that is crucial in ray marching is the order of operations. If you tr
 
 It would be even better to add mouse control for the camera to view the scene from different angles. This can easily be done using the 2D rotation function along with the current position of the mouse.
 
-> In GLSL canvas, which is used the mouse position is only captured as a `vec2`. It can be defined as a uniform as follows:
+> In glsl-canvas, which is used by the glsl-canvas Visual Studio Code extension, the mouse position is only captured as a `vec2` and only provides the `x` and `y` parameters specified below. It can be defined as a uniform as follows:
 >
 > ```glsl
 > uniform vec2 u_mouse;
