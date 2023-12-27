@@ -3,7 +3,7 @@ precision mediump float;
 #endif
 
 uniform vec2 u_resolution;
-uniform vec2 u_mouse;
+uniform vec3 u_mouse;
 uniform float u_time;
 
 mat2 rot2D(float angle) {
@@ -33,9 +33,7 @@ float map(vec3 p) {
 
     vec3 q = p;
 
-    q.y -= u_time * 0.4;
-
-    q = fract(q) - 0.5;
+    q = fract(p) - 0.5;
 
     float box = sdBox(q, vec3(0.1));
     float ground = p.y + 0.75;
@@ -54,13 +52,15 @@ void main() {
 
     float t = 0.0;
 
-    // vertical camera rotation
-    // ro.yz *= rot2D(-m.y);
-    // rd.yz *= rot2D(-m.y);
+    if(u_mouse.z > 0.0) {
+        // vertical camera rotation
+        ro.yz *= rot2D(-m.y);
+        rd.yz *= rot2D(-m.y);
 
-    // horizontal camera rotation
-    // ro.xz *= rot2D(-m.x);
-    // rd.xz *= rot2D(-m.x);
+        // horizontal camera rotation
+        ro.xz *= rot2D(-m.x);
+        rd.xz *= rot2D(-m.x);
+    }
 
     // ray marching
     for(int i = 0; i < 80; i++) {
@@ -69,7 +69,8 @@ void main() {
 
         t += d;
 
-        if (d < 0.001 || t > 100.0) break;
+        if(d < 0.001 || t > 100.0)
+            break;
     }
 
     // coloring

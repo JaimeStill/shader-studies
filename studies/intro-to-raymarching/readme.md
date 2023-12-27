@@ -476,15 +476,11 @@ One aspect that is crucial in ray marching is the order of operations. If you tr
 
 ## Camera Rotation
 
-It would be even better to add mouse control for the camera to view the scene from different angles. This can easily be done using the 2D rotation function along with the current position of the mouse.
-
-> In glsl-canvas, which is used by the glsl-canvas Visual Studio Code extension, the mouse position is only captured as a `vec2` and only provides the `x` and `y` parameters specified below. It can be defined as a uniform as follows:
+> The section described here is relative to the Shadertoy implementation of `iMouse`. Not all GLSL rendering platforms have the same structure for uniform values. For instance, in the `glsl-canvas` Visual Studio Code extension, `u_mouse` is a `vec2` and only handles movement (`x` and `y`) and not mouse clicks. In the included [renderer](../../renderer/main.js#L63), `u_mouse` is configured to be a `vec3` that with an additional `z` parameter that tracks when the primary mouse button is clicked (`1.0` if pressed, `0.0` if not pressed).
 >
-> ```glsl
-> uniform vec2 u_mouse;
-> uniform vec2 u_resolution;
-> ```
-> Note that the `vec4` convention will be used for this documentation as it works when running in the Three.js-based [renderer](../../renderer/) project.
+> Consequently, the actual implementation of mouse interactions in the shader files will vary from the video to accomodate the implementation of `u_mouse` locally.
+
+It would be even better to add mouse control for the camera to view the scene from different angles. This can easily be done using the 2D rotation function along with the current position of the mouse.
 
 It's a `vec4(x, y, z, w)` where the first two components represent the current pixel coordinates of the mouse much like the `gl_FragCoord` input parameter. The last two components contain information about the starting position and state of the mouse.
 
@@ -501,7 +497,7 @@ mouse down | `u_mouse.z > 0`
 1st frame | `u_mouse.zw > 0`
 mouse up | `u_mouse.zw < 0`
 
-Only the mouse position is needed, which can be extracted with swizzling. To mouse position in clip space can be established by creating a new vector and appliyng the same transformation as the `uv` coordinates:
+Only the mouse position is needed, which can be extracted with swizzling. The mouse position in clip space can be established by creating a new vector and applying the same transformation as the `uv` coordinates:
 
 ```glsl
 void main() {
@@ -512,3 +508,83 @@ void main() {
 ```
 
 This new vector will have a value of `-1, -1` when the mouse is at the bottom left, a value of `1, 1` when the mouse is at the top right, and a value of `0, 0` when the mouse is centered.
+
+The ray's origin and direction can be rotated around the `y` axis. The rotation angle will be determined by the current `x` position of the mouse vector, which needs to be negated:
+
+```glsl
+// horizontal camera rotation
+ro.xz *= rot2D(-m.x);
+rd.xz *= rot2D(-m.x);
+```
+
+If only the ray origin is rotated, the camera will rotate around the scene and stay pointed in the same direction. This will not track the objects in the scene causing them to move out of view. Adding rotation to the ray direction will ensure that the camera rotates around the scene and adjusts the rotation of the facing direction to remain pointed at the objects.
+
+For a complete 360° rotation around the scene, the same technique can be applied along the `x` axis, this time using the vertical position of the mouse. The order of operations matters and it's important to place vertical rotation before horizontal rotation:
+
+```glsl
+// vertical camera rotation
+ro.yz *= rot2D(-m.y);
+rd.yz *= rot2D(-m.y);
+
+// horizontal camera rotation
+ro.xz *= rot2D(-m.x);
+rd.xz *= rot2D(-m.x);
+```
+
+You can also scale the mouse vector to control how sensitive the rotation is.
+
+// TODO: Insert 11-camera-rotation.frag video
+
+## Space Repetition
+
+Space repetition is an extremely powerful tool in ray marching which allows an infinite amount of shapes to be rendered while defining just one. The `fract()` function can be used to replicate objects in space. This function returns the fractional part of the input for each component, keeping the result between `0` and `1`:
+
+```glsl
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time) * 3.0, 0.0, 0.0);
+    float sphere = sdSphere(p - spherePos, 1.0);
+
+    vec3 q = p;
+
+    q = fract(p) - 0.5;
+
+    float box = sdBox(q, vec3(0.1));
+    float ground = p.y + 0.75;
+
+    return smin(ground, smin(sphere, box, 2.0), 1.0);
+}
+```
+
+When the ray is passed through the `fract()` function, the input to the SDF Is always constrained within the unit cell at the origin. From the ray's perspective, this makes the scene appear to contain an infinite number of cubes, each one unit apart from the other.
+
+To achieve more granular control, it's possible to use the `mod()` function instead. It takes an additional parameter that can be used to control the spacing between each repetition. `fract()` is a special case of the `mod()` function: `fract(x) = mod(x, 1.0)`.
+
+The current visualization is missing an important step as the cube is originally located at `0` while the center of repetition is located at `0.5`. This makes every cube extend further than the repeated cell boundaries and it results in them being clipped. This is why `0.5` needs to be subtracted after applying the space repetition function, which translates each cube to the center of its cell and fixes clipping issues.
+
+Finally, the cube is scaled down because it currently has a bigger side length than the distance of repetition , making it fill the entire space.
+
+// TODO: Insert 12-space-repetition.frag video
+
+It is also possible to apply space repetition to individual axes instead of all 3 of them:
+
+```glsl
+// only repeat across the x and y axes
+q.xy = frag(p.xy) - 5;
+```
+
+The intensity of the depth value can be lowered to see further away:
+
+```glsl
+col = vec3(t * 0.05);
+```
+
+Upward movement can also be added to every box:
+
+```glsl
+q.y -= u_time * 0.4;
+q = fract(q) - 0.5;
+```
+
+Note that the change to `q.y` needs to be added before applying space repetition or else the boxes would clip out of their repetition.
+
+// TODO: Insert 13-vertical-box-movement.frag video

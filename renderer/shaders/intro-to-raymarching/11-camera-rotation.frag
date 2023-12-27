@@ -3,7 +3,7 @@ precision mediump float;
 #endif
 
 uniform vec2 u_resolution;
-uniform vec4 u_mouse;
+uniform vec3 u_mouse;
 uniform float u_time;
 
 mat2 rot2D(float angle) {
@@ -51,9 +51,16 @@ void main() {
 
     float t = 0.0;
 
-    // horizontal camera rotation
-    ro.xz *= rot2D(-m.x);
-    rd.xz *= rot2D(-m.x);
+    // camera rotation
+    if(u_mouse.z > 0.0) {
+        // vertical 
+        ro.yz *= rot2D(-m.y);
+        rd.yz *= rot2D(-m.y);
+
+        // horizontal
+        ro.xz *= rot2D(-m.x);
+        rd.xz *= rot2D(-m.x);
+    }
 
     // ray marching
     for(int i = 0; i < 80; i++) {
@@ -62,7 +69,8 @@ void main() {
 
         t += d;
 
-        if (d < 0.001 || t > 100.0) break;
+        if(d < 0.001 || t > 100.0)
+            break;
     }
 
     // coloring

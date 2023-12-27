@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const file = './shaders/intro-to-raymarching/11-camera-rotation.frag';
+const file = './shaders/intro-to-raymarching/13-vertical-box-movement.frag';
 let frag;
 let container;
 let camera, scene, renderer, clock;
@@ -36,8 +36,8 @@ function init() {
             value: new THREE.Vector2()
         },
         u_mouse: {
-            type: "v2",
-            value: new THREE.Vector2()
+            type: "v3",
+            value: new THREE.Vector3(undefined, undefined, -1)
         }
     };
 
@@ -63,6 +63,18 @@ function init() {
     document.onmousemove = function(e) {
         uniforms.u_mouse.value.x = e.pageX;
         uniforms.u_mouse.value.y = e.pageY;
+    }
+
+    document.onmousedown = function(e) {
+        uniforms.u_mouse.value.z = e.button === 0
+            ? 1
+            : 0;
+    }
+
+    document.onmouseup = function(e) {
+        uniforms.u_mouse.value.z = e.button === 0
+            ? 0
+            : uniforms.u_mouse.value.z;
     }
 }
 
