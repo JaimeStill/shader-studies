@@ -588,3 +588,118 @@ q = fract(q) - 0.5;
 Note that the change to `q.y` needs to be added before applying space repetition or else the boxes would clip out of their repetition.
 
 // TODO: Insert 13-vertical-box-movement.frag video
+
+## Getting Creative
+
+Before going any further, the `map()` function is cleaned up to remove all but the repeated box, and movement is changed from the `y` axis to the `z` axis, bringing the boxes towards the camera. Here's the full simplified shader:
+
+```glsl
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float map(vec3 p) {
+    p.z += u_time * 0.4;
+
+    p = fract(p) - 0.5;
+
+    float box = sdBox(p, vec3(0.1));
+
+    return box;
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+
+    // initialization
+    vec3 ro = vec3(0.0, 0.0, -3.0);
+    vec3 rd = normalize(vec3(uv * 1.5, 1.0));
+    vec3 col = vec3(0);
+
+    float t = 0.0;
+
+    // ray marching
+    for(int i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+        float d = map(p);
+
+        t += d;
+
+        if (d < 0.001 || t > 100.0) break;
+    }
+
+    // coloring
+    col = vec3(t * 0.05);
+
+    gl_FragColor = vec4(col, 1.0);
+}
+```
+
+// TODO: Insert 14-simplify.frag video
+
+### Colorize
+
+So far, shader has demonstrated how to build a ray marching algorithm and how to play with objects in the scene, but it's still colorized using the depth to the scene, which is a bit boring.
+
+The next easiest way to colorize objects is to pass the depth value as the input to a color gradient function that can convert this linearly increasing value to a color vector:
+
+> This is the same palette function introduced in [Intro to Shader Art Coding](../intro-to-shader-art-coding/readme.md#palette)
+
+```glsl
+vec3 palette(float t) {
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.263, 0.416, 0.557);
+
+    return a + b * cos(6.28318 * (c * t + d));
+}
+```
+
+The `palette()` function will be called to calculate the output color and pass the depth as input:
+
+```glsl
+// coloring
+col = palette(t * 0.04);
+```
+
+// TODO: Insert 15-colorize.frag video
+
+### Octahedron
+
+The box distance function is replaced by an octahedron signed distance function. The spacing in the `z` direction will also be decreased to make each shape closer together only in the axis that is parallel to the camera. For that, the space repetition is decomposed into two parts: the `x` and `y` axis will be repeated using `fract()` as before, and the `z` axis will be repated using the `mod()` function with a spacing of `0.25` which is then offset by half of the repetition spacing, which is `0.125`:
+
+> Very interesting pattern is observed if only the space repetition for the `z` axis is omitted!
+
+```glsl
+float sdOctahedron(vec3 p, float s) {
+    p = abs(p);
+    return (p.x + p.y + p.z - s) * 0.57735027;
+}
+
+float map(vec3 p) {
+    p.z += u_time * 0.4;
+
+    p.xy = fract(p.xy) - 0.5;
+    p.z = mod(p.z, 0.24) - 0.125;
+
+    float box = sdOctahedron(p, 0.15);
+
+    return box;
+}
+```
+
+// TODO: Insert 16-octahedron.frag video
+
+### Color Depth
+
+The current colorization technique makes the objects appear very flat as lighting or occlusionm effects were not implemented. A quick solution would be to incorporate the iteration count from the loop into the `palette()` function. (28:45).

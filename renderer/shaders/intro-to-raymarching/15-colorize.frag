@@ -14,18 +14,18 @@ vec3 palette(float t) {
     return a + b * cos(6.28318 * (c * t + d));
 }
 
-float sdOctahedron(vec3 p, float s) {
-    p = abs(p);
-    return (p.x + p.y + p.z - s) * 0.57735027;
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
 float map(vec3 p) {
     p.z += u_time * 0.4;
 
-    p.xy = fract(p.xy) - 0.5;
-    p.z = mod(p.z, 0.24) - 0.125;
+    p = fract(p) - 0.5;
 
-    float box = sdOctahedron(p, 0.15);
+    float box = sdBox(p, vec3(0.1));
 
     return box;
 }
