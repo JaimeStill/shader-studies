@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const file = './shaders/intro-to-raymarching/13-vertical-box-movement.frag';
+const file = './shaders/intro-to-raymarching/21-final.frag';
 let frag;
 let container;
 let camera, scene, renderer, clock;
@@ -61,20 +61,26 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 
     document.onmousemove = function(e) {
-        uniforms.u_mouse.value.x = e.pageX;
-        uniforms.u_mouse.value.y = e.pageY;
+        uniforms.u_mouse.value.x = e.offsetX;
+
+        // invert y axis for bottom origin
+        uniforms.u_mouse.value.y = Math.floor(e.offsetY - e.target.offsetHeight);
     }
 
     document.onmousedown = function(e) {
         uniforms.u_mouse.value.z = e.button === 0
-            ? 1
-            : 0;
+            ? 0
+            : -1;
     }
 
     document.onmouseup = function(e) {
         uniforms.u_mouse.value.z = e.button === 0
-            ? 0
+            ? -1
             : uniforms.u_mouse.value.z;
+    }
+
+    document.onmouseleave = function(e) {
+        uniforms.u_mouse.value.z = -1;
     }
 }
 

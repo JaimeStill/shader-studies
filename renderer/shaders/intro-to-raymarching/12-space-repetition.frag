@@ -52,7 +52,7 @@ void main() {
 
     float t = 0.0;
 
-    if(u_mouse.z > 0.0) {
+    if(u_mouse.z >= 0.0) {
         // vertical camera rotation
         ro.yz *= rot2D(-m.y);
         rd.yz *= rot2D(-m.y);

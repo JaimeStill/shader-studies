@@ -476,7 +476,7 @@ One aspect that is crucial in ray marching is the order of operations. If you tr
 
 ## Camera Rotation
 
-> The section described here is relative to the Shadertoy implementation of `iMouse`. Not all GLSL rendering platforms have the same structure for uniform values. For instance, in the `glsl-canvas` Visual Studio Code extension, `u_mouse` is a `vec2` and only handles movement (`x` and `y`) and not mouse clicks. In the included [renderer](../../renderer/main.js#L63), `u_mouse` is configured to be a `vec3` that with an additional `z` parameter that tracks when the primary mouse button is clicked (`1.0` if pressed, `0.0` if not pressed).
+> The section described here is relative to the Shadertoy implementation of `iMouse`. Not all GLSL rendering platforms have the same structure for uniform values. For instance, in the `glsl-canvas` Visual Studio Code extension, `u_mouse` is a `vec2` and only handles movement (`x` and `y`) and not mouse clicks. In the included [renderer](../../renderer/main.js#L63), `u_mouse` is configured to be a `vec3` that with an additional `z` parameter that tracks when the primary mouse button is clicked (`0.0` if pressed, `-1.0` if not pressed).
 >
 > Consequently, the actual implementation of mouse interactions in the shader files will vary from the video to accomodate the implementation of `u_mouse` locally.
 
@@ -493,8 +493,8 @@ Component | Description
 
 State | Check
 ------|------
-mouse down | `u_mouse.z > 0`
-1st frame | `u_mouse.zw > 0`
+mouse down | `u_mouse.z >= 0`
+1st frame | `u_mouse.zw >= 0`
 mouse up | `u_mouse.zw < 0`
 
 Only the mouse position is needed, which can be extracted with swizzling. The mouse position in clip space can be established by creating a new vector and applying the same transformation as the `uv` coordinates:
@@ -622,7 +622,7 @@ void main() {
 
     // initialization
     vec3 ro = vec3(0.0, 0.0, -3.0);
-    vec3 rd = normalize(vec3(uv * 1.5, 1.0));
+    vec3 rd = normalize(vec3(uv, 1.0));
     vec3 col = vec3(0);
 
     float t = 0.0;
@@ -702,4 +702,318 @@ float map(vec3 p) {
 
 ### Color Depth
 
-The current colorization technique makes the objects appear very flat as lighting or occlusionm effects were not implemented. A quick solution would be to incorporate the iteration count from the loop into the `palette()` function. (28:45).
+The current colorization technique makes the objects appear very flat as lighting or occlusionm effects were not implemented. A quick solution would be to incorporate the iteration count from the loop into the `palette()` function. This value actually contains information about the scene as it will increase with distance, but also increase when approaching edges of objects as it will need more steps to travel the scene. If it is extracted from the loop and displayed directly after normalizing, the amount it contains can be seen:
+
+> When using the *glsl-canvas* extension in VS Code, the for loop cannot use the syntax below. A separate integer must be declared just above the `for` loop and initialized to the value of `i` at the very beginning of the iteration.
+
+```glsl
+// ray marching
+    int i;
+    for (i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+        float d = map(p);
+
+        t += d;
+
+        if (d < 0.001 || t > 100.0) break;
+    }
+
+    // coloring
+    col = vec3(float(i) / 80.0);
+```
+
+This is only a hack because the iteration count is not smooth as opposed to the depth buffer. The lower the iteration count, the more visible the artifacts will be. If multiplied with a very tiny number, the addition stays subtle. The `float` keyword is used to convert the `int`:
+
+```glsl
+col = palette(t * 0.04 + float(i) * 0.005);
+```
+
+// TODO: Insert 17-index-depth.frag
+
+### Sinusoidal Distortion
+
+Transformation can be applied to the ray itself in order to affect how objects appear in the scene. In this case, a sinusoidal offset is applied to the `y` component of the ray to distort the scene in a unique way. It is added in the main loop before the `map()` function to indicate that it's a scene transformation and not object specific. The `sin()` function is added to the `y` component of the position, `p`, along the ray and the frequency will be determined by the total distance traveled so far, `t`. The amplitude of the waves is also scaled down for a cleaner effect by multiplying the result of the `sin()` functino by `0.35`.
+
+```glsl
+// ray marching
+int i;
+for (i = 0; i < 80; i++) {
+    j = i;
+    vec3 p = ro + rd * t;
+    p.y += sin(t) * 0.35;
+
+    float d = map(p);
+
+    t += d;
+
+    if (d < 0.001 || t > 100.0) break;
+}
+```
+
+// TODO: Insert 18-sinusoidal-y.frag video
+
+The scene is still defined by a single, undistorted octahedron located at the origin. It's just the rays that were given superpowers to completely ignore the rules of 3D cartesian space and somewhat hallucinate new geometry.
+
+### Mouse Controlled Frequency
+
+The frequency of the sinusoidal distortion along the `y` axis can be controlled using the vertical component of the mouse. It should be going from `0` to `1`, so the `y` component of the mouse clip space transformation needs to be remapped accordingly:
+
+```glsl
+p.y += sin*(t * (m.y + 1.0) * 0.5) * 0.35;
+```
+
+This allows the frequency of the oscillations to be changed by moving the mouse up and down.
+
+```glsl
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 u_resolution;
+uniform vec3 u_mouse;
+uniform float u_time;
+
+vec3 palette(float t) {
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.263, 0.416, 0.557);
+
+    return a + b * cos(6.28318 * (c * t + d));
+}
+
+float sdOctahedron(vec3 p, float s) {
+    p = abs(p);
+    return (p.x + p.y + p.z - s) * 0.57735027;
+}
+
+float map(vec3 p) {
+    p.z += u_time * 0.4;
+
+    p.xy = fract(p.xy) - 0.5;
+    p.z = mod(p.z, 0.25) - 0.125;
+
+    float box = sdOctahedron(p, 0.15);
+
+    return box;
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+
+    // initialization
+    vec3 ro = vec3(0.0, 0.0, -3.0);
+    vec3 rd = normalize(vec3(uv, 1.0));
+    vec3 col = vec3(0);
+
+    float t = 0.0;
+
+    // ray marching
+    int i;
+    for(i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+
+        if(u_mouse.z >= 0.0) {
+            p.y += sin(t * (m.y + 1.0) * 0.5) * 0.35;
+        } else {            
+            p.y += sin(t * 0.5) * 0.15;
+        }
+
+        float d = map(p);
+
+        t += d;
+
+        if(d < 0.001 || t > 100.0)
+            break;
+    }
+
+    // coloring
+    col = palette(t * 0.04 + float(i) * 0.005);
+
+    gl_FragColor = vec4(col, 1.0);
+}
+```
+
+// TODO: Insert 19-mouse-sinusoidal-y.frag video
+
+### Rotational Distortions
+
+The same distortion principle used to control the offset will be used to control the rotation of the ray. The rays should start rotating around the `z` axis the further from the camera they go. This can be done using the previous 2D rotation function:
+
+```glsl
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+```
+
+Because the rotation will be around the `z` axis, the `x` and `y` components of the point are extracted: `p.xy *= rot2D(t * 0.2)`. The rotation increases with distance, producing a spiral effect.
+
+```glsl
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+vec3 palette(float t) {
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.263, 0.416, 0.557);
+
+    return a + b * cos(6.28318 * (c * t + d));
+}
+
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+
+float sdOctahedron(vec3 p, float s) {
+    p = abs(p);
+    return (p.x + p.y + p.z - s) * 0.57735027;
+}
+
+float map(vec3 p) {
+    p.z += u_time * 0.4;
+
+    p.xy = fract(p.xy) - 0.5;
+    p.z = mod(p.z, 0.25) - 0.125;
+
+    float box = sdOctahedron(p, 0.15);
+
+    return box;
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+
+    // initialization
+    vec3 ro = vec3(0.0, 0.0, -3.0);
+    vec3 rd = normalize(vec3(uv, 1.0));
+    vec3 col = vec3(0);
+
+    float t = 0.0;
+
+    // ray marching
+    int i;
+    for (i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+
+        p.xy *= rot2D(t * 0.2);
+
+        float d = map(p);
+
+        t += d;
+
+        if (d < 0.001 || t > 100.0) break;
+    }
+
+    // coloring
+    col = palette(t * 0.04 + float(i) * 0.005);
+
+    gl_FragColor = vec4(col, 1.0);
+}
+```
+
+// TODO: Insert 20-spiral-z.frag video
+
+These two transformations actually break the distance calculations similar to the scaling operator. If you distort the space too much, visual artifacts will start to appear.
+
+### Mouse Controlled Spirals
+
+The `x` component of the mouse can be used to control the frequency of the rotation. It will not be remapped, so it ranges from `-1` to `1` from left to right allowing the direction of rotation to be changed.
+
+When the mouse is not pressed, a default behavior should be implemented that simulates moving the mouse in a circle around the scene. This is pretty straightforward using trigonometry. The position of a point along a circle given a radius and an angle is:
+
+```
+p = r * vec2(cos(angle), sin(angle))
+```
+
+Since the scene is in clip space, the radius is one and time can be used to have an infinite looping rotation.
+
+This can be added by overwriting the value of the mouse vector, `m`, when the mouse is not pressed, which can be detected by checking if the `z` component of `u_mouse` is less than `1`. This addition will fake an endless circular motion of the mouse around the canvas to give a final touch of dynamism to the scene.
+
+```glsl
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 u_resolution;
+uniform vec3 u_mouse;
+uniform float u_time;
+
+vec3 palette(float t) {
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.263, 0.416, 0.557);
+
+    return a + b * cos(6.28318 * (c * t + d));
+}
+
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+
+float sdOctahedron(vec3 p, float s) {
+    p = abs(p);
+    return (p.x + p.y + p.z - s) * 0.57735027;
+}
+
+float map(vec3 p) {
+    p.z += u_time * 0.4;
+
+    p.xy = fract(p.xy) - 0.5;
+    p.z = mod(p.z, 0.25) - 0.125;
+
+    float box = sdOctahedron(p, 0.15);
+
+    return box;
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+
+    // initialization
+    vec3 ro = vec3(0.0, 0.0, -3.0);
+    vec3 rd = normalize(vec3(uv, 1.0));
+    vec3 col = vec3(0);
+
+    float t = 0.0;
+
+    // default circular motion if not clicked
+    if (u_mouse.z < 0.0)
+        m = vec2(cos(u_time * 0.2), sin(u_time * 0.2));
+
+    // ray marching
+    int i;
+    for (i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+
+        p.xy *= rot2D(t * 0.2 * m.x);
+        p.y += sin(t * (m.y + 1.0) * 0.5) * 0.35;
+
+        float d = map(p);
+
+        t += d;
+
+        if (d < 0.001 || t > 100.0) break;
+    }
+
+    // coloring
+    col = palette(t * 0.04 + float(i) * 0.005);
+
+    gl_FragColor = vec4(col, 1.0);
+}
+```
+
+// TODO: Insert 21-final.frag video
